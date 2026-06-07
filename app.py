@@ -385,12 +385,6 @@ DASHBOARD_FRAME_HTML = """
 <div class="flex items-center gap-3">
 <div class="flex items-center gap-1">
 <button class="p-2 hover:bg-surface-container-low transition-colors rounded-full cursor-pointer active:opacity-80">
-<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
-</button>
-<button class="p-2 hover:bg-surface-container-low transition-colors rounded-full cursor-pointer active:opacity-80">
-<span class="material-symbols-outlined text-on-surface-variant">settings</span>
-</button>
-<button class="p-2 hover:bg-surface-container-low transition-colors rounded-full cursor-pointer active:opacity-80">
 <span class="material-symbols-outlined text-on-surface-variant">help</span>
 </button>
 </div>
