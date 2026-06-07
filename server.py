@@ -8,9 +8,6 @@ from engine import run_aegis_flow_engine, METRO_HUBS, haversine_distance
 
 app = FastAPI()
 
-if not os.path.exists(DB_NAME):
-    initialize_database()
-
 # =====================================================================
 # Helper Database Query Handlers for UI Tables
 # =====================================================================
@@ -495,6 +492,8 @@ DASHBOARD_FRAME_HTML = """
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard(request: Request):
+    if not os.path.exists(DB_NAME):
+        initialize_database()
     hub = request.query_params.get("hub", "Hyderabad")
     view = request.query_params.get("view", "dashboard")
     
