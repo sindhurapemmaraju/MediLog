@@ -1,7 +1,11 @@
 import sqlite3
 import os
 
-DB_NAME = "hospital_ecosystem.db"
+# Check if running in a serverless/containerized environment where local filesystem is read-only
+if os.environ.get("VERCEL") or os.environ.get("RENDER"):
+    DB_NAME = "/tmp/hospital_ecosystem.db"
+else:
+    DB_NAME = "hospital_ecosystem.db"
 
 # Center coordinates for each metropolitan hub center
 METRO_HUBS = {

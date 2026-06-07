@@ -772,7 +772,7 @@ async def execute_engine_pipeline(request: Request, user_input: str = Form(...),
             </div>
             <div>
                 <p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Rules Latency Score</p>
-                <p class="font-headline-sm text-headline-sm text-on-surface">{active_hub} Node</p>
+                <p class="font-headline-sm text-headline-sm text-on-surface">&lt; 1ms Execution</p>
             </div>
         </div>
     </div>

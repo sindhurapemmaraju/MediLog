@@ -4,7 +4,7 @@ import json
 import math
 from typing import Dict, Any, List, TypedDict, Callable
 
-DB_NAME = "hospital_ecosystem.db"
+from database import DB_NAME
 
 # Center coordinates for each metropolitan hub center
 METRO_HUBS = {
