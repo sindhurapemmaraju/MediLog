@@ -20,10 +20,20 @@ METRO_HUBS = {
 def initialize_database():
     """Initializes a regional, multi-city medical inventory ledger with multiple asset classes."""
     if os.path.exists(DB_NAME):
-        os.remove(DB_NAME)
+        try:
+            os.remove(DB_NAME)
+        except Exception:
+            pass
+        
+    db_dir = os.path.dirname(DB_NAME)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
         
     conn = sqlite3.connect(DB_NAME)
-    conn.execute("PRAGMA journal_mode=WAL;")
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+    except Exception:
+        pass
     cursor = conn.cursor()
 
     
