@@ -3,7 +3,7 @@ import sqlite3
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.requests import Request
-from database import initialize_database, DB_NAME
+from database import initialize_database, DB_NAME, verify_database_initialized
 from engine import run_aegis_flow_engine, METRO_HUBS, haversine_distance
 
 app = FastAPI()
@@ -535,9 +535,9 @@ DASHBOARD_FRAME_HTML = """
 # =====================================================================
 
 @app.get("/", response_class=HTMLResponse)
+@app.head("/", response_class=HTMLResponse)
 async def serve_dashboard(request: Request):
-    if not os.path.exists(DB_NAME):
-        initialize_database()
+    verify_database_initialized()
     hub = request.query_params.get("hub", "Hyderabad")
     view = request.query_params.get("view", "dashboard")
     scenario = request.query_params.get("scenario")
@@ -679,8 +679,7 @@ async def serve_dashboard(request: Request):
 
 @app.post("/", response_class=HTMLResponse)
 async def execute_engine_pipeline(request: Request, user_input: str = Form(...), active_hub: str = Form("Hyderabad")):
-    if not os.path.exists(DB_NAME):
-        initialize_database()
+    verify_database_initialized()
         
     # Run our local rules block
     output_state = run_aegis_flow_engine(user_input, hub=active_hub)

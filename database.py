@@ -1,11 +1,21 @@
 import sqlite3
 import os
 
-# Check if running in a serverless/containerized environment where local filesystem is read-only
+import tempfile
+
+# Determine the database path dynamically
 if os.environ.get("VERCEL") or os.environ.get("RENDER"):
-    DB_NAME = "/tmp/hospital_ecosystem.db"
+    DB_NAME = os.path.join(tempfile.gettempdir(), "hospital_ecosystem.db")
 else:
     DB_NAME = "hospital_ecosystem.db"
+    # Fallback if local directory is read-only
+    try:
+        test_file = "test_write.tmp"
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+    except Exception:
+        DB_NAME = os.path.join(tempfile.gettempdir(), "hospital_ecosystem.db")
 
 # Center coordinates for each metropolitan hub center
 METRO_HUBS = {
@@ -35,6 +45,11 @@ def initialize_database():
     except Exception:
         pass
     cursor = conn.cursor()
+
+    # Drop tables if they exist to avoid 'table already exists' errors on recreate
+    cursor.execute("DROP TABLE IF EXISTS inventory")
+    cursor.execute("DROP TABLE IF EXISTS neighboring_hospitals")
+    cursor.execute("DROP TABLE IF EXISTS active_transfers")
 
     
     # 1. Local Ledger Table (contains inventories segmented by hub)
@@ -183,6 +198,16 @@ def initialize_database():
     
     conn.commit()
     conn.close()
+
+def verify_database_initialized():
+    """Checks if database tables exist and initializes them if not."""
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM inventory")
+        conn.close()
+    except Exception:
+        initialize_database()
 
 if __name__ == "__main__":
     initialize_database()
