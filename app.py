@@ -9,6 +9,25 @@ from engine import run_aegis_flow_engine, METRO_HUBS, haversine_distance
 app = FastAPI()
 
 # =====================================================================
+# Triage Scenarios Configuration
+# =====================================================================
+
+SCENARIOS = [
+    ("TRAUMA ROOM 1 EMERGENCY: Patient experiencing massive blood loss, urgent demand for 4 units of O-Negative Blood. Check asset bank balance immediately.", "Trauma Triage: O-Neg Blood"),
+    ("AUTOMATED REPORT: Local stock of Epinephrine 1mg/mL is running dangerously low. Predict depletion curve and scan routing networks for supply dispatch.", "Med Alert: Epinephrine Low"),
+    ("CRITICAL VENOM INJURY: Triage reports multiple snakebite admissions. Demand for 15 vials of Polyvalent Antivenom. Verify local levels and scan nearest partner hubs.", "Snakebite: Antivenom Triage"),
+    ("ICU SYSTEM ALERT: Surge in respiratory admissions has depleted local stock of Ventilator Circuits. 10 units required immediately to maintain life support nodes.", "ICU Alert: Ventilator Shortage"),
+    ("NEONATAL UNIT URGENT: Preterm infant in respiratory distress requires 5 vials of Surfactant. Local supply depleted. Search regional cold-chain transport networks.", "Neonatal: Surfactant Crisis")
+]
+
+def get_scenario_options_html(selected_value: str = None) -> str:
+    html = ""
+    for val, label in SCENARIOS:
+        is_selected = "selected" if val == selected_value else ""
+        html += f'<option value="{val}" {is_selected}>{label}</option>'
+    return html
+
+# =====================================================================
 # Helper Database Query Handlers for UI Tables
 # =====================================================================
 
@@ -397,8 +416,9 @@ DASHBOARD_FRAME_HTML = """
 <!-- METROPOLITAN HUB SELECTOR -->
 <form id="hub-form" action="/" method="get" class="mb-4">
     <input type="hidden" name="view" value="{selected_view}">
+    <input type="hidden" name="scenario" id="hidden-scenario" value="">
     <label class="block text-[11px] font-bold text-outline uppercase tracking-widest px-2 mb-1.5">Metropolitan Hub</label>
-    <select name="hub" onchange="document.getElementById('hub-form').submit()" class="w-full border border-outline-variant rounded-lg p-2 text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary font-semibold text-on-surface">
+    <select name="hub" onchange="submitHubForm()" class="w-full border border-outline-variant rounded-lg p-2 text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary font-semibold text-on-surface">
         {hub_options}
     </select>
 </form>
@@ -410,12 +430,8 @@ DASHBOARD_FRAME_HTML = """
     <input type="hidden" name="active_hub" value="{selected_hub}">
     <div>
         <label class="block text-[11px] font-bold text-outline uppercase tracking-widest px-2 mb-1.5">Triage Scenario</label>
-        <select name="user_input" class="w-full border border-outline-variant rounded-lg p-2 text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary text-on-surface font-semibold">
-            <option value="TRAUMA ROOM 1 EMERGENCY: Patient experiencing massive blood loss, urgent demand for 4 units of O-Negative Blood. Check asset bank balance immediately.">Trauma Triage: O-Neg Blood</option>
-            <option value="AUTOMATED REPORT: Local stock of Epinephrine 1mg/mL is running dangerously low. Predict depletion curve and scan routing networks for supply dispatch.">Med Alert: Epinephrine Low</option>
-            <option value="CRITICAL VENOM INJURY: Triage reports multiple snakebite admissions. Demand for 15 vials of Polyvalent Antivenom. Verify local levels and scan nearest partner hubs.">Snakebite: Antivenom Triage</option>
-            <option value="ICU SYSTEM ALERT: Surge in respiratory admissions has depleted local stock of Ventilator Circuits. 10 units required immediately to maintain life support nodes.">ICU Alert: Ventilator Shortage</option>
-            <option value="NEONATAL UNIT URGENT: Preterm infant in respiratory distress requires 5 vials of Surfactant. Local supply depleted. Search regional cold-chain transport networks.">Neonatal: Surfactant Crisis</option>
+        <select id="scenario-select" name="user_input" onchange="updateScenario(this.value)" class="w-full border border-outline-variant rounded-lg p-2 text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary text-on-surface font-semibold">
+            {scenario_options}
         </select>
     </div>
 
@@ -428,11 +444,11 @@ DASHBOARD_FRAME_HTML = """
 </div>
 <nav class="flex-1 space-y-1">
 <div class="text-[11px] font-bold text-outline uppercase tracking-widest px-2 mb-2">Navigation</div>
-<a class="flex items-center gap-3 px-3 py-2 {dashboard_active_classes} rounded-lg group cursor-pointer active:scale-95 duration-150" href="/?hub={selected_hub}&view=dashboard">
+<a id="dashboard-link" class="flex items-center gap-3 px-3 py-2 {dashboard_active_classes} rounded-lg group cursor-pointer active:scale-95 duration-150" href="/?hub={selected_hub}&view=dashboard">
 <span class="material-symbols-outlined">dashboard</span>
 <span class="font-label-md text-label-md">Dashboard</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2 {transfers_active_classes} rounded-lg group cursor-pointer active:scale-95 duration-150 transition-all" href="/?hub={selected_hub}&view=transfers">
+<a id="transfers-link" class="flex items-center gap-3 px-3 py-2 {transfers_active_classes} rounded-lg group cursor-pointer active:scale-95 duration-150 transition-all" href="/?hub={selected_hub}&view=transfers">
 <span class="material-symbols-outlined">local_shipping</span>
 <span class="font-label-md text-label-md">Active Transfers</span>
 </a>
@@ -482,6 +498,40 @@ DASHBOARD_FRAME_HTML = """
                 link.classList.remove('text-on-surface-variant');
             }});
         }});
+
+        function updateScenario(val) {{
+            const hiddenScenario = document.getElementById('hidden-scenario');
+            if (hiddenScenario) {{
+                hiddenScenario.value = val;
+            }}
+            
+            const hub = "{selected_hub}";
+            const dashboardLink = document.getElementById('dashboard-link');
+            const transfersLink = document.getElementById('transfers-link');
+            
+            if (dashboardLink) {{
+                dashboardLink.href = `/?hub=${{hub}}&view=dashboard&scenario=${{encodeURIComponent(val)}}`;
+            }}
+            if (transfersLink) {{
+                transfersLink.href = `/?hub=${{hub}}&view=transfers&scenario=${{encodeURIComponent(val)}}`;
+            }}
+        }}
+
+        function submitHubForm() {{
+            const scenarioSelect = document.getElementById('scenario-select');
+            const hiddenScenario = document.getElementById('hidden-scenario');
+            if (scenarioSelect && hiddenScenario) {{
+                hiddenScenario.value = scenarioSelect.value;
+            }}
+            document.getElementById('hub-form').submit();
+        }}
+
+        window.addEventListener('DOMContentLoaded', () => {{
+            const scenarioSelect = document.getElementById('scenario-select');
+            if (scenarioSelect) {{
+                updateScenario(scenarioSelect.value);
+            }}
+        }});
     </script>
 </body></html>
 """
@@ -496,6 +546,7 @@ async def serve_dashboard(request: Request):
         initialize_database()
     hub = request.query_params.get("hub", "Hyderabad")
     view = request.query_params.get("view", "dashboard")
+    scenario = request.query_params.get("scenario")
     
     idle_brief = """
     <strong>Ready for Dispatch Evaluation</strong><br><br>
@@ -624,6 +675,7 @@ async def serve_dashboard(request: Request):
         network_table=network_table,
         telemetry_logs=idle_logs,
         hub_options=hub_options,
+        scenario_options=get_scenario_options_html(scenario),
         alert_count=alert_count,
         warning_banner=warning_banner,
         dashboard_active_classes=dashboard_active_classes,
@@ -784,6 +836,7 @@ async def execute_engine_pipeline(request: Request, user_input: str = Form(...),
         network_table=network_table,
         telemetry_logs=log_blocks,
         hub_options=hub_options,
+        scenario_options=get_scenario_options_html(user_input),
         alert_count=alert_count,
         warning_banner=warning_banner,
         dashboard_active_classes=dashboard_active_classes,
